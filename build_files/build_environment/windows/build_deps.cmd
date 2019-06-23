@@ -129,7 +129,7 @@ if "%dobuild%" == "1" (
 )
 echo %DATE% %TIME% : Release Harvest done >> %StatusFile%
 cd %BUILD_DIR%
-if "%dodebug" == "1" (
+if "%dodebug%" == "1" (
 	mkdir %STAGING%\%BuildDir%%ARCH%D
 	cd %Staging%\%BuildDir%%ARCH%D
 	cmake -G "%CMAKE_BUILDER%" %SOURCE_DIR% -DDOWNLOAD_DIR=%BUILD_DIR%/downloads -DCMAKE_BUILD_TYPE=Debug -DBUILD_MODE=Debug -DHARVEST_TARGET=%HARVEST_DIR%/%HARVESTROOT%%VSVER_SHORT%/  %CMAKE_DEBUG_OPTIONS%
