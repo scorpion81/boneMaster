@@ -20,6 +20,17 @@ if(BUILD_MODE STREQUAL Debug)
   set(BLOSC_POST _d)
 endif()
 
+if(WIN32)
+  set(OPENVDB_PYTHON ${LIBDIR}/python/37/bin/python.exe)
+  set(OPENVDB_PYTHON_INCLUDE ${LIBDIR}/python/include/Python3.7)
+  set(OPENVDB_PYTHON_LIBRARY ${LIBDIR}/python/lib/python37.lib)
+else()
+  set(OPENVDB_PYTHON ${LIBDIR}/python/bin/python3.7m)
+  set(OPENVDB_PYTHON_INCLUDE ${LIBDIR}/python/include/python3.7m)
+  set(OPENVDB_PYTHON_LIBRARY ${LIBDIR}/python/lib/libpython3.7m.a)
+endif()
+
+
 set(OPENVDB_EXTRA_ARGS
   -DBoost_COMPILER:STRING=${BOOST_COMPILER_STRING}
   -DBoost_USE_MULTITHREADED=ON
@@ -33,7 +44,11 @@ set(OPENVDB_EXTRA_ARGS
   -DBLOSC_blosc_LIBRARY=${LIBDIR}/blosc/lib/libblosc${BLOSC_POST}${LIBEXT}
   -DOPENVDB_ENABLE_3_ABI_COMPATIBLE=OFF
   -DOPENVDB_BUILD_UNITTESTS=Off
-  -DOPENVDB_BUILD_PYTHON_MODULE=Off
+  -DOPENVDB_BUILD_PYTHON_MODULE=ON
+  -DPYTHON_EXECUTABLE=${OPENVDB_PYTHON}
+  -DPYTHONLIBS_VERSION_STRING=3.7m
+  -DPYTHON_LIBRARY=${OPENVDB_PYTHON_LIBRARY}
+  -DPYTHON_INCLUDE_DIR=${OPENVDB_PYTHON_INCLUDE}
   -DGLEW_LOCATION=${LIBDIR}/glew/
   -DBLOSC_LOCATION=${LIBDIR}/blosc/
   -DTBB_LOCATION=${LIBDIR}/tbb/
@@ -70,7 +85,11 @@ ExternalProject_Add(openvdb
   DOWNLOAD_DIR ${DOWNLOAD_DIR}
   URL_HASH MD5=${OPENVDB_HASH}
   PREFIX ${BUILD_DIR}/openvdb
-  PATCH_COMMAND ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/openvdb.diff
+  PATCH_COMMAND 
+     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/openvdb.diff &&
+     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/openvdb_python_cmakelists.diff &&
+     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/pyopenvdb_numpy_option.diff &&
+     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/pyopenvdb_modification_amb.diff
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBDIR}/openvdb ${DEFAULT_CMAKE_FLAGS} ${OPENVDB_EXTRA_ARGS}
   INSTALL_DIR ${LIBDIR}/openvdb
 )
@@ -83,6 +102,7 @@ add_dependencies(
   external_openexr
   external_zlib
   external_blosc
+  external_python
 )
 
 if(WIN32)

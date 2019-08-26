@@ -1,0 +1,20 @@
+diff -Nur '--exclude=.git' ./CMakeLists.txt /home/martin/blender_dev/build_linux/deps/build/openvdb/src/openvdb/CMakeLists.txt
+--- ./CMakeLists.txt	2019-08-25 23:24:56.114463553 +0200
++++ /home/martin/blender_dev/build_linux/deps/build/openvdb/src/openvdb/CMakeLists.txt	2019-08-26 15:21:35.094553523 +0200
+@@ -47,11 +47,15 @@
+ OPTION ( OPENVDB_ENABLE_RPATH "Build with RPATH information" ON )
+ OPTION ( OPENVDB_ENABLE_3_ABI_COMPATIBLE "Build with OpenVDB v3 ABI" OFF )
+ OPTION ( OPENVDB_DISABLE_BOOST_IMPLICIT_LINKING "Disable the implicit linking of Boost libraries on Windows" ON )
+-
++OPTION ( OPENVDB_BUILD_PYTHON_MODULE_NUMPY "Build the pyopenvdb Python module with NumPy support" ON)
+ SET ( OPENVDB_ABI_VERSION_NUMBER "" CACHE STRING "build for compatibility
+ with version N of the OpenVDB Grid ABI, where N is 2, 3, 4, etc. 
+ (some newer features will be disabled)")
+ 
++IF (OPENVDB_BUILD_PYTHON_MODULE_NUMPY)
++    ADD_DEFINITIONS( -DPY_OPENVDB_USE_NUMPY )
++ENDIF()
++
+ IF (OPENVDB_BUILD_HOUDINI_SOPS)
+   SET ( OPENVDB_BUILD_PYTHON_MODULE OFF )
+ ENDIF ()

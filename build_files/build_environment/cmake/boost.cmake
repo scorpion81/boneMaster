@@ -72,10 +72,26 @@ set(BOOST_OPTIONS
   --with-serialization
   --with-program_options
   --with-iostreams
+  --with-python
   ${BOOST_TOOLSET}
 )
 
 string(TOLOWER ${BUILD_MODE} BOOST_BUILD_TYPE)
+
+
+if(WIN32)
+    set(BOOST_CONFIGURE_OPTIONS 
+    --with-python=${LIBDIR}/python/37/bin/python.exe
+    --with-python-root=${LIBDIR}/python
+    --with-python-version=3.7m
+)
+else()
+set(BOOST_CONFIGURE_OPTIONS 
+    --with-python=${LIBDIR}/python/bin/python3.7m
+    --with-python-root=${LIBDIR}/python
+    --with-python-version=3.7m
+)
+endif()
 
 ExternalProject_Add(external_boost
   URL ${BOOST_URI}
@@ -84,8 +100,13 @@ ExternalProject_Add(external_boost
   PREFIX ${BUILD_DIR}/boost
   UPDATE_COMMAND  ""
   PATCH_COMMAND ${BOOST_PATCH_COMMAND}
-  CONFIGURE_COMMAND ${BOOST_CONFIGURE_COMMAND}
+  CONFIGURE_COMMAND ${BOOST_CONFIGURE_COMMAND} ${BOOST_CONFIGURE_OPTIONS}
   BUILD_COMMAND ${BOOST_BUILD_COMMAND} ${BOOST_BUILD_OPTIONS} -j${MAKE_THREADS} architecture=x86 address-model=${BOOST_ADDRESS_MODEL} link=static threading=multi ${BOOST_OPTIONS}    --prefix=${LIBDIR}/boost install
   BUILD_IN_SOURCE 1
   INSTALL_COMMAND "${BOOST_HARVEST_CMD}"
+)
+
+add_dependencies(
+  external_boost
+  external_python
 )
