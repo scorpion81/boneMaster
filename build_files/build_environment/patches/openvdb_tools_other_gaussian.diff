@@ -1,0 +1,157 @@
+diff --git a/openvdb/tools/Filter.h b/openvdb/tools/Filter.h
+index c2a198e..00cf978 100644
+--- a/openvdb/tools/Filter.h
++++ b/openvdb/tools/Filter.h
+@@ -51,7 +51,11 @@
+ #include <algorithm> // for std::max()
+ #include <functional>
+ #include <type_traits>
++#include <cmath>
+ 
++#define PI 3.141592653589793f
++#define EE 2.718281828459045f
++#define PISQRT 2.5066282746310002f
+ 
+ namespace openvdb {
+ OPENVDB_USE_VERSION_NAMESPACE
+@@ -149,12 +153,11 @@ public:
+ 
+     /// @brief One iteration of a fast separable Gaussian filter.
+     ///
+-    /// @note This is approximated as 4 iterations of a separable mean filter
+-    /// which typically leads an approximation that's better than 95%!
+     /// @param width The width of the mean-value filter is 2*width+1 voxels.
+     /// @param iterations Number of times the mean-value filter is applied.
++	/// @param sigma of the Gaussian distribution
+     /// @param mask Optional alpha mask.
+-    void gaussian(int width = 1, int iterations = 1, const MaskType* mask = nullptr);
++    void gaussian(int width=1, int iterations=1, float sigma=1.0, const MaskType* mask = nullptr);
+ 
+     /// @brief One iteration of a median-value filter
+     ///
+@@ -198,12 +201,28 @@ private:
+         const float frac;
+     };
+ 
++	template<size_t Axis>
++	struct AvgI {
++		AvgI(const GridT* grid, Int32 w, float q) : acc(grid->tree()), width(w), sigma(q) {}
++		inline ValueType operator()(Coord xyz);
++		typename GridT::ConstAccessor acc;
++		const Int32 width;
++		const float sigma;
++	};
++
+     // Private filter methods called by tbb::parallel_for threads
+     template <typename AvgT>
+     void doBox( const RangeType& r, Int32 w);
+     void doBoxX(const RangeType& r, Int32 w) { this->doBox<Avg<0> >(r,w); }
+     void doBoxZ(const RangeType& r, Int32 w) { this->doBox<Avg<1> >(r,w); }
+     void doBoxY(const RangeType& r, Int32 w) { this->doBox<Avg<2> >(r,w); }
++
++	template <typename AvgT>
++	void doBoxI(const RangeType& r, Int32 w, float q);
++	void doBoxXI(const RangeType& r, Int32 w, float q) { this->doBoxI<AvgI<0> >(r, w, q); }
++	void doBoxZI(const RangeType& r, Int32 w, float q) { this->doBoxI<AvgI<1> >(r, w, q); }
++	void doBoxYI(const RangeType& r, Int32 w, float q) { this->doBoxI<AvgI<2> >(r, w, q); }
++
+     void doMedian(const RangeType&, int);
+     void doOffset(const RangeType&, ValueType);
+     /// @return true if the process was interrupted
+@@ -242,6 +261,34 @@ Filter<GridT, MaskT, InterruptT>::Avg<Axis>::operator()(Coord xyz)
+ }
+ 
+ 
++template<typename GridT, typename MaskT, typename InterruptT>
++template<size_t Axis>
++inline typename GridT::ValueType
++Filter<GridT, MaskT, InterruptT>::AvgI<Axis>::operator()(Coord xyz)
++{
++	// Sampled Gaussian kernel
++	ValueType sum = zeroVal<ValueType>();
++	float multiplier = 0.f, error = 0.f;
++	//float sigma = std::sqrt((float)width / 4.0f);
++	// M = C*sqrt(t) + 1
++	//int M = (int)(5.0f * sigma + 1.0f);
++	int M = width;
++
++	Int32 &i = xyz[Axis], j = i + M;
++	Int32 center = i;
++
++	for (i -= M; i <= j; ++i) {
++		// G(x) = 1/sqrt(2*PI)/sigma * e ** -(x**2/(2*sigma**2))
++		Int32 x = i - center;
++		multiplier = 1.f / PISQRT / sigma * std::pow(EE, -x*x / (2 * sigma*sigma));
++		error += multiplier;
++		filter_internal::accum(sum, multiplier * acc.getValue(xyz));
++	}
++	//return static_cast<ValueType>(sum / error);
++	return static_cast<ValueType>(sum);
++}
++
++
+ ////////////////////////////////////////
+ 
+ 
+@@ -274,27 +321,26 @@ Filter<GridT, MaskT, InterruptT>::mean(int width, int iterations, const MaskType
+ 
+ template<typename GridT, typename MaskT, typename InterruptT>
+ inline void
+-Filter<GridT, MaskT, InterruptT>::gaussian(int width, int iterations, const MaskType* mask)
++Filter<GridT, MaskT, InterruptT>::gaussian(int width, int iterations, float sigma, const MaskType* mask)
+ {
+     mMask = mask;
+ 
+     if (mInterrupter) mInterrupter->start("Applying Gaussian filter");
+ 
+-    const int w = std::max(1, width);
++	const float q = std::max(0.1f, sigma);
++	const int w = std::max(1, width);
+ 
+     LeafManagerType leafs(mGrid->tree(), 1, mGrainSize==0);
+ 
+     for (int i=0; i<iterations; ++i) {
+-        for (int n=0; n<4 && !this->wasInterrupted(); ++n) {
+-            mTask = std::bind(&Filter::doBoxX, std::placeholders::_1, std::placeholders::_2, w);
+-            this->cook(leafs);
++        mTask = std::bind(&Filter::doBoxXI, std::placeholders::_1, std::placeholders::_2, w, q);
++        this->cook(leafs);
+ 
+-            mTask = std::bind(&Filter::doBoxY, std::placeholders::_1, std::placeholders::_2, w);
+-            this->cook(leafs);
++        mTask = std::bind(&Filter::doBoxYI, std::placeholders::_1, std::placeholders::_2, w, q);
++        this->cook(leafs);
+ 
+-            mTask = std::bind(&Filter::doBoxZ, std::placeholders::_1, std::placeholders::_2, w);
+-            this->cook(leafs);
+-        }
++        mTask = std::bind(&Filter::doBoxZI, std::placeholders::_1, std::placeholders::_2, w, q);
++        this->cook(leafs);
+     }
+ 
+     if (mInterrupter) mInterrupter->end();
+@@ -385,6 +431,24 @@ Filter<GridT, MaskT, InterruptT>::doBox(const RangeType& range, Int32 w)
+ }
+ 
+ 
++/// One dimensional convolution of a separable filter
++template<typename GridT, typename MaskT, typename InterruptT>
++template <typename AvgT>
++inline void
++Filter<GridT, MaskT, InterruptT>::doBoxI(const RangeType& range, Int32 w, float q)
++{
++	this->wasInterrupted();
++	AvgT avg(mGrid, w, q);
++
++	for (LeafIterT leafIter = range.begin(); leafIter; ++leafIter) {
++		BufferT& buffer = leafIter.buffer(1);
++		for (VoxelCIterT iter = leafIter->cbeginValueOn(); iter; ++iter) {
++			buffer.setValue(iter.pos(), avg(iter.getCoord()));
++		}
++	}
++}
++
++
+ /// Performs simple but slow median-value diffusion
+ template<typename GridT, typename MaskT, typename InterruptT>
+ inline void

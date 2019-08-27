@@ -87,9 +87,9 @@ ExternalProject_Add(openvdb
   PREFIX ${BUILD_DIR}/openvdb
   PATCH_COMMAND 
      ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/openvdb.diff &&
-     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/openvdb_python_cmakelists.diff &&
-     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/pyopenvdb_numpy_option.diff &&
-     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/pyopenvdb_modification_amb.diff
+     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/pyopenvdb_cmakelists.diff &&
+     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/openvdb_tools_other_gaussian.diff &&
+     ${PATCH_CMD} -p 1 -d ${BUILD_DIR}/openvdb/src/openvdb < ${PATCH_DIR}/pyopenvdb_pygrid_extension.diff
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBDIR}/openvdb ${DEFAULT_CMAKE_FLAGS} ${OPENVDB_EXTRA_ARGS}
   INSTALL_DIR ${LIBDIR}/openvdb
 )

@@ -83,13 +83,13 @@ if(WIN32)
     set(BOOST_CONFIGURE_OPTIONS 
     --with-python=${LIBDIR}/python/37/bin/python.exe
     --with-python-root=${LIBDIR}/python
-    --with-python-version=3.7m
+    --with-python-version=3.7
 )
 else()
 set(BOOST_CONFIGURE_OPTIONS 
     --with-python=${LIBDIR}/python/bin/python3.7m
     --with-python-root=${LIBDIR}/python
-    --with-python-version=3.7m
+    --with-python-version=3.7
 )
 endif()
 
@@ -108,5 +108,13 @@ ExternalProject_Add(external_boost
 
 add_dependencies(
   external_boost
-  external_python
+  external_numpy #should depend on python
+)
+
+#for building pyopenvdb, it cannot handle the python version suffix properly
+set (VER 37)
+ExternalProject_Add_Step(external_boost after_install
+  COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/boost/lib/libboost_python${VER}.a ${LIBDIR}/boost/lib/libboost_python.a
+  COMMAND ${CMAKE_COMMAND} -E copy ${LIBDIR}/boost/lib/libboost_numpy${VER}.a ${LIBDIR}/boost/lib/libboost_numpy.a
+  DEPENDEES install
 )

@@ -101,3 +101,12 @@ if(UNIX)
     external_zlib
   )
 endif()
+
+#for building boost-python, it cannot handle the abiflag "m" properly
+if(UNIX)
+    set (VER 3.7)
+    ExternalProject_Add_Step(external_python after_install
+      COMMAND ${CMAKE_COMMAND} -E create_symlink ${LIBDIR}/python/include/python${VER}m ${LIBDIR}/python/include/python${VER}
+      DEPENDEES install
+    )
+endif()

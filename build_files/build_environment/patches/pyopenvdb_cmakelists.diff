@@ -1,0 +1,23 @@
+diff --git a/openvdb/python/CMakeLists.txt b/openvdb/python/CMakeLists.txt
+index f7b7f57..f811d2e 100644
+--- a/openvdb/python/CMakeLists.txt
++++ b/openvdb/python/CMakeLists.txt
+@@ -3,8 +3,9 @@ PROJECT ( PyOpenVDB )
+ 
+ FIND_PACKAGE ( PythonInterp REQUIRED )
+ FIND_PACKAGE ( PythonLibs REQUIRED )
+-FIND_PACKAGE ( Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS python )
++FIND_PACKAGE ( Boost ${MINIMUM_BOOST_VERSION} REQUIRED COMPONENTS python numpy )
+ 
++ADD_DEFINITIONS( -DPY_OPENVDB_USE_NUMPY)
+ 
+ IF ( NOT OPENVDB_BUILD_CORE )
+   FIND_PACKAGE ( OpenVDB REQUIRED )
+@@ -93,6 +94,7 @@ TARGET_LINK_LIBRARIES ( pyopenvdb
+   ${GLFW_DEPENDENT_LIBRARIES}
+   ${GLEW_GLEW_LIBRARY}
+   ${Boost_PYTHON_LIBRARY}
++  ${Boost_NUMPY_LIBRARY}
+   ${PYTHON_LIBRARY}
+   ${Ilmbase_HALF_LIBRARY}
+   )
